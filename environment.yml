@@ -1,0 +1,11 @@
+name: "forsviksbruk"
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14
+  - pip
+  - gdal
+  - libvips
+  - pip:
+    # Core configuration
+    - -r requirements.txt
