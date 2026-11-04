@@ -1,26 +1,70 @@
 """
-Example Serializers
+Forsviksbruk Viewer Serializers
 
-Demonstrates how to create serializers using the abstract framework.
+Translated fields are returned in the active language (e.g. /sv/api/..., /de/api/...),
+falling back to the default language when a translation is missing.
 """
 
+from rest_framework import serializers
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from forsviksbruk_backend.abstract.serializers import GenericSerializer, DynamicDepthSerializer
-from .models import Place, Tag, PlaceImage
+from .models import Area, Article, ArticleLink, ArticleSpace, Page, PlanAnnotation, PointcloudAnnotation
 
 
-class TagSerializer(GenericSerializer):
+class AreaSerializer(GeoFeatureModelSerializer):
+    class Meta:
+        model = Area
+        geo_field = "coordinates"
+        fields = ["id", "name", "description"]
+
+
+class PageSerializer(GenericSerializer):
     class Meta(GenericSerializer.Meta):
-        model = Tag
-        fields = ["id", "text"]
+        model = Page
+        fields = ["id", "slug", "title", "text"]
 
 
-class PlaceImageSerializer(GenericSerializer):
-    class Meta(GenericSerializer.Meta):
-        model = PlaceImage
-        fields = ["id", "uuid", "file", "caption"]
+class ArticleSpaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleSpace
+        fields = ["order", "text", "image", "sound", "video_url", "caption"]
 
 
-class PlaceSerializer(DynamicDepthSerializer):
+class ArticleLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleLink
+        fields = ["order", "url", "label"]
+
+
+class ArticleSerializer(DynamicDepthSerializer):
+    area_name = serializers.CharField(source="area.name", read_only=True, default=None)
+    spaces = ArticleSpaceSerializer(many=True, read_only=True)
+    links = ArticleLinkSerializer(many=True, read_only=True)
+
     class Meta(DynamicDepthSerializer.Meta):
-        model = Place
-        fields = "__all__"
+        model = Article
+        fields = ["id", "area", "area_name", "title", "spaces", "links"]
+
+
+class PlanAnnotationSerializer(GeoFeatureModelSerializer):
+    class Meta:
+        model = PlanAnnotation
+        geo_field = "position"
+        fields = [
+            "id",
+            "area",
+            "annotation_type",
+            "pointcloud",
+            "panorama",
+            "textured_model",
+            "image",
+            "camera_position",
+            "look_at",
+            "initial_article",
+        ]
+
+
+class PointcloudAnnotationSerializer(DynamicDepthSerializer):
+    class Meta(DynamicDepthSerializer.Meta):
+        model = PointcloudAnnotation
+        fields = ["id", "pointcloud", "position", "article"]

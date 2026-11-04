@@ -23,6 +23,7 @@ django-colorfield<=0.14.0
 django-rangefilter<=0.9.1
 django-ckeditor<=6.5.1
 django-better-admin-arrayfield<=1.4.2
+django-modeltranslation>=0.19, <0.20
 
 # REST Framework extensions
 drf-generators<=0.5.0

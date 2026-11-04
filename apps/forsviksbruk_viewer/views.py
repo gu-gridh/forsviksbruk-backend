@@ -1,23 +1,70 @@
 """
-Example Views
+Forsviksbruk Viewer Views
 
-Demonstrates how to use the abstract viewsets.
+Read-only API endpoints for the multimodal map and the Digicure viewer.
 """
 
+from digicure_viewer import views as digicure_views
+from digicure_viewer.models import PointCloud
+from digicure_viewer.serializers import PointCloudSerializer
 from forsviksbruk_backend.abstract.views import DynamicDepthViewSet, GeoViewSet
 
-from .models import Place, Tag
-from .serializers import PlaceSerializer, TagSerializer
+from .models import Area, Article, Page, PlanAnnotation, PointcloudAnnotation
+from .serializers import (
+    AreaSerializer,
+    ArticleSerializer,
+    PageSerializer,
+    PlanAnnotationSerializer,
+    PointcloudAnnotationSerializer,
+)
 
 
-class PlaceViewSet(GeoViewSet):
-    """API endpoint for Places"""
-    queryset = Place.objects.filter(published=True)
-    serializer_class = PlaceSerializer
-    bbox_filter_field = "geometry"
+class AreaViewSet(GeoViewSet):
+    """API endpoint for areas (e.g. Forge, Smithery)"""
+    queryset = Area.objects.filter(published=True)
+    serializer_class = AreaSerializer
+    bbox_filter_field = "coordinates"
+    filterset_fields = ["id"]
+    search_fields = ["name"]
 
 
-class TagViewSet(DynamicDepthViewSet):
-    """API endpoint for Tags"""
-    queryset = Tag.objects.filter(published=True)
-    serializer_class = TagSerializer
+class PageViewSet(DynamicDepthViewSet):
+    """API endpoint for static page texts, filter with ?slug=start"""
+    queryset = Page.objects.filter(published=True)
+    serializer_class = PageSerializer
+    filterset_fields = ["slug"]
+
+
+class ArticleViewSet(DynamicDepthViewSet):
+    """API endpoint for mini-articles including their spaces and links"""
+    queryset = Article.objects.filter(published=True).prefetch_related("spaces", "links")
+    serializer_class = ArticleSerializer
+    filterset_fields = ["area"]
+
+
+class PlanAnnotationViewSet(GeoViewSet):
+    """API endpoint for annotations on the multimodal map"""
+    queryset = PlanAnnotation.objects.filter(published=True)
+    serializer_class = PlanAnnotationSerializer
+    bbox_filter_field = "position"
+    filterset_fields = ["area", "annotation_type"]
+
+
+class PointcloudAnnotationViewSet(DynamicDepthViewSet):
+    """API endpoint for annotations inside a point cloud, filter with ?pointcloud=<id>"""
+    queryset = PointcloudAnnotation.objects.filter(published=True)
+    serializer_class = PointcloudAnnotationSerializer
+    filterset_fields = ["pointcloud", "article"]
+
+
+class PointCloudViewSet(DynamicDepthViewSet):
+    """API endpoint for Digicure point clouds"""
+    queryset = PointCloud.objects.filter(published=True)
+    serializer_class = PointCloudSerializer
+    filterset_fields = ["id", "place"]
+
+
+class PanoramaViewSet(digicure_views.PanoramaViewSet):
+    """API endpoint for Digicure panoramas"""
+    # digicure_viewer's auto-generated filterset fails on its ImageField
+    filterset_fields = ["id", "place"]

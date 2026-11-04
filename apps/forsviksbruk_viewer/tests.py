@@ -1,61 +1,78 @@
 """
-Example App Tests
-
-Demonstrates testing patterns using the abstract test framework.
+Forsviksbruk Viewer Tests
 """
 
 import pytest
-from django.urls import reverse
+from django.contrib.gis.geos import Point
+from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 from rest_framework import status
-from .models import Place, Tag
+from digicure_viewer.models import Panorama, PointCloud
+from .models import Area, Article, ArticleSpace, PlanAnnotation
 
 
 @pytest.mark.django_db
-class TestPlaceModel:
-    """Tests for the Place model"""
+class TestPlanAnnotation:
+    """Resource fields must match the type of annotation"""
 
-    def test_create_place(self):
-        place = Place.objects.create(name="Test Place", description="A test")
-        assert place.name == "Test Place"
-        assert place.published is True
-        assert place.created_at is not None
+    def setup_method(self):
+        self.pointcloud = PointCloud.objects.create(title="Forge scan")
 
-    def test_str_representation(self):
-        place = Place.objects.create(name="My Place")
-        assert str(place) == "My Place"
+    def test_matching_resource_is_valid(self):
+        annotation = PlanAnnotation(
+            position=Point(14.43, 58.97),
+            annotation_type=PlanAnnotation.Type.POINTCLOUD,
+            pointcloud=self.pointcloud,
+            camera_position=[1.0, 2.0, 3.0],
+            look_at=[0.0, 0.0, 0.0],
+        )
+        annotation.full_clean()
+        assert annotation.resource == self.pointcloud
+
+    def test_missing_resource_is_invalid(self):
+        annotation = PlanAnnotation(position=Point(0, 0), annotation_type=PlanAnnotation.Type.PANORAMA)
+        with pytest.raises(ValidationError) as error:
+            annotation.full_clean()
+        assert "panorama" in error.value.message_dict
+
+    def test_other_resource_is_invalid(self):
+        annotation = PlanAnnotation(
+            position=Point(0, 0),
+            annotation_type=PlanAnnotation.Type.PANORAMA,
+            panorama=Panorama.objects.create(title="Yard"),
+            pointcloud=self.pointcloud,
+        )
+        with pytest.raises(ValidationError) as error:
+            annotation.full_clean()
+        assert "pointcloud" in error.value.message_dict
 
 
 @pytest.mark.django_db
-class TestTagModel:
-    """Tests for the Tag model"""
+class TestArticleSpace:
 
-    def test_create_tag(self):
-        tag = Tag.objects.create(text="history")
-        assert tag.text == "history"
-
-    def test_unique_text(self):
-        Tag.objects.create(text="unique")
-        with pytest.raises(Exception):
-            Tag.objects.create(text="unique")
+    def test_only_one_media_object(self):
+        article = Article.objects.create(title="Hammaren")
+        space = ArticleSpace(article=article, order=1, video_url="https://example.org/video", image="a.jpg")
+        with pytest.raises(ValidationError):
+            space.full_clean()
 
 
 @pytest.mark.django_db
-class TestPlaceAPI:
-    """Tests for the Place API endpoints"""
+class TestArticleAPI:
 
     def setup_method(self):
         self.client = APIClient()
-        self.place = Place.objects.create(
-            name="API Place",
-            description="Test via API",
-        )
+        area = Area.objects.create(name_sv="Smedja", name_en="Forge")
+        self.article = Article.objects.create(area=area, title_sv="Hammaren", title_en="The hammer")
+        ArticleSpace.objects.create(article=self.article, order=1, text_sv="Text")
 
-    def test_list_places(self):
-        response = self.client.get("/api/example/places/")
+    def test_translated_title(self):
+        response = self.client.get(f"/sv/api/viewer/articles/{self.article.pk}/")
         assert response.status_code == status.HTTP_200_OK
+        assert response.data["title"] == "Hammaren"
+        assert response.data["area_name"] == "Smedja"
+        assert len(response.data["spaces"]) == 1
 
-    def test_retrieve_place(self):
-        response = self.client.get(f"/api/example/places/{self.place.pk}/")
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["name"] == "API Place"
+    def test_falls_back_to_swedish(self):
+        response = self.client.get(f"/de/api/viewer/articles/{self.article.pk}/")
+        assert response.data["title"] == "Hammaren"
