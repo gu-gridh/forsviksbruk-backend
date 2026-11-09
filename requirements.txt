@@ -37,8 +37,8 @@ django-admin-autocomplete-filter
 factory-boy>=3.3.0, <3.4.0
 
 # GRIDH packages
-gridh_abstract @ git+https://github.com/gu-gridh/gridh-abstract-django.git@main
-digicure_viewer @ git+https://github.com/gu-gridh/django-digicure-viewer.git@main
+gridh_abstract @ git+ssh://github.com/gu-gridh/gridh-abstract-django.git@main
+digicure_viewer @ git+ssh://github.com/gu-gridh/django-digicure-viewer.git@main
 
 # dev dependencies
 django-debug-toolbar>=8.0.0, <8.1.0
