@@ -34,23 +34,32 @@ def read_json(path: str, encoding='utf-8', **kwargs):
 load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-change-in-production')
+INSECURE_SECRET_KEY = 'django-insecure-default-key-change-in-production'
+SECRET_KEY = os.getenv('SECRET_KEY', INSECURE_SECRET_KEY)
 
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-]
+def env_list(name: str, default: str) -> list:
+    """Read a comma-separated environment variable as a list"""
+    return [item.strip() for item in os.getenv(name, default).split(',') if item.strip()]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]   
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', 'http://localhost:8080,http://127.0.0.1:8080')
+
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:8080,http://127.0.0.1:8080')
+
+# Leave DB_* unset locally to connect through the local Postgres socket as the current user
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASS'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
+}
 
 # Add apps in configs/apps.json in case you want to have multiple apps 
 APPS_CONFIG_PATH = os.path.join(str(BASE_DIR.parent), 'configs', 'apps.json')
@@ -72,6 +81,7 @@ PROJECTS = [
 
 ADDONS = [
     'rest_framework',
+    'rest_framework_gis',
     'django_filters',
     'corsheaders',
     'drf_generators',
@@ -79,10 +89,13 @@ ADDONS = [
     'rangefilter',
     'rest_framework_xml',
     'gridh_abstract',
+    'digicure_viewer',
     'debug_toolbar',
 ]
 
 INSTALLED_APPS = [
+    # must come before django.contrib.admin
+    'modeltranslation',
     *PROJECTS,
     *ADDONS,
 
@@ -174,23 +187,29 @@ USE_TZ = True
 LOCALE_PATHS = [os.path.join(BASE_DIR, 'locale')]
 
 LANGUAGES = [
-    ('en', _('English')),
     ('sv', _('Swedish')),
+    ('en', _('English')),
+    ('de', _('German')),
 ]
+
+# Translated model fields, see apps/*/translation.py
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'sv'
+MODELTRANSLATION_FALLBACK_LANGUAGES = ('sv', 'en')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-STATIC_URL = '/static/'
+STATIC_URL = os.getenv('STATIC_URL', '/static/')
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static_build')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# collectstatic target; must differ from STATICFILES_DIRS
+STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, 'static_build'))
+STATICFILES_DIRS = [path for path in [os.path.join(BASE_DIR, 'static')] if os.path.isdir(path)]
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
 
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-MEDIA_URL = "/media/"
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, "media"))
+MEDIA_URL = os.getenv('MEDIA_URL', "/media/")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -221,3 +240,14 @@ REST_FRAMEWORK = {
 
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# digicure_viewer
+DIGICURE_PLACE_MODEL = 'forsviksbruk_viewer.Area'
+# digicure_viewer ships without migrations, so keep them in this repo
+MIGRATION_MODULES = {
+    'digicure_viewer': 'forsviksbruk_backend.digicure_migrations',
+}
+IIIF_URL = os.getenv('IIIF_URL', '')
+PANORAMA_PUBLIC_BASE_URL = os.getenv('PANORAMA_PUBLIC_BASE_URL', '')
+IMAGE_PROCESSOR_URL = os.getenv('IMAGE_PROCESSOR_URL', '')
+IMAGE_PROCESSOR_TOKEN = os.getenv('IMAGE_PROCESSOR_TOKEN', '')

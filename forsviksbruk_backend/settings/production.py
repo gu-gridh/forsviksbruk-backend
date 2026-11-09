@@ -1,28 +1,19 @@
 from .base import *
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 DEBUG = False
 
-MEDIA_ROOT = os.getenv("MEDIA_ROOT", os.path.join(BASE_DIR, "media"))
-MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
-STATIC_ROOT = os.getenv("STATIC_ROOT", os.path.join(BASE_DIR, "static"))
-STATIC_URL = os.getenv("STATIC_URL", "/static/")
+# Refuse to start with a missing or default secret key
+if SECRET_KEY == INSECURE_SECRET_KEY:
+    raise ImproperlyConfigured("Set SECRET_KEY in the environment for production.")
 
-# ManifestStaticFilesStorage is recommended in production, to prevent
-# outdated JavaScript / CSS assets being served from cache.
-# See https://docs.djangoproject.com/en/5.2/ref/contrib/staticfiles/#manifeststaticfilesstorage
-if "STORAGES" not in globals():
-	STORAGES = {}
-STORAGES.setdefault("staticfiles", {})
-STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
-
-
-
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'your-domain.com,www.your-domain.com').split(',')
-CSRF_TRUSTED_ORIGINS = ["https://your-domain.com"]
+# Default static storage: ManifestStaticFilesStorage fails on collectstatic because
+# third-party admin assets reference missing source maps (e.g. js/wNumb.min.js.map)
 
 # Additional production settings
-SECURE_SSL_REDIRECT = True
+# Set SECURE_SSL_REDIRECT=False if the reverse proxy already redirects to https
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -30,13 +21,10 @@ SECURE_BROWSER_XSS_FILTER = True
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASS'),
-        'HOST': os.getenv('HOST'),
-        'PORT': os.getenv('PORT'),
-    }
-}
+# Email
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '25'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
