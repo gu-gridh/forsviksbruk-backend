@@ -7,14 +7,13 @@ Read-only API endpoints for the multimodal map and the Digicure viewer.
 from digicure_viewer import views as digicure_views
 from digicure_viewer.models import PointCloud
 from digicure_viewer.serializers import PointCloudSerializer
-from forsviksbruk_backend.abstract.views import DynamicDepthViewSet, GeoViewSet
+from forsviksbruk_backend.abstract.views import DynamicDepthViewSet
 
-from .models import Area, Article, Page, PlanAnnotation, PointcloudAnnotation
+from .models import Area, Article, Page, PointcloudAnnotation
 from .serializers import (
     AreaSerializer,
     ArticleSerializer,
     PageSerializer,
-    PlanAnnotationSerializer,
     PointcloudAnnotationSerializer,
 )
 
@@ -38,14 +37,6 @@ class ArticleViewSet(DynamicDepthViewSet):
     queryset = Article.objects.filter(published=True).prefetch_related("spaces", "links")
     serializer_class = ArticleSerializer
     filterset_fields = ["area"]
-
-
-class PlanAnnotationViewSet(GeoViewSet):
-    """API endpoint for annotations on the multimodal map"""
-    queryset = PlanAnnotation.objects.filter(published=True)
-    serializer_class = PlanAnnotationSerializer
-    bbox_filter_field = "position"
-    filterset_fields = ["area", "annotation_type"]
 
 
 class PointcloudAnnotationViewSet(DynamicDepthViewSet):

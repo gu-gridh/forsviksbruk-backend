@@ -6,9 +6,8 @@ falling back to the default language when a translation is missing.
 """
 
 from rest_framework import serializers
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from forsviksbruk_backend.abstract.serializers import GenericSerializer, DynamicDepthSerializer
-from .models import Area, Article, ArticleLink, ArticleSpace, Page, PlanAnnotation, PointcloudAnnotation
+from .models import Area, Article, ArticleLink, ArticleSpace, Page, PointcloudAnnotation
 
 
 class AreaSerializer(GenericSerializer):
@@ -43,24 +42,6 @@ class ArticleSerializer(DynamicDepthSerializer):
     class Meta(DynamicDepthSerializer.Meta):
         model = Article
         fields = ["id", "area", "area_name", "title", "location", "spaces", "links"]
-
-
-class PlanAnnotationSerializer(GeoFeatureModelSerializer):
-    class Meta:
-        model = PlanAnnotation
-        geo_field = "position"
-        fields = [
-            "id",
-            "area",
-            "annotation_type",
-            "pointcloud",
-            "panorama",
-            "textured_model",
-            "image",
-            "camera_position",
-            "look_at",
-            "initial_article",
-        ]
 
 
 class PointcloudAnnotationSerializer(DynamicDepthSerializer):

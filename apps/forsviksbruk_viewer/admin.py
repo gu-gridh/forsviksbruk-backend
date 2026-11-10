@@ -1,5 +1,5 @@
 from django.contrib import admin
-from leaflet.admin import LeafletGeoAdmin, LeafletGeoAdminMixin
+from leaflet.admin import LeafletGeoAdminMixin
 from modeltranslation.admin import TabbedTranslationAdmin, TranslationTabularInline, TranslationStackedInline
 
 from .models import (
@@ -10,7 +10,6 @@ from .models import (
     ArticleLink,
     ArticleSpace,
     Page,
-    PlanAnnotation,
     PointcloudAnnotation,
 )
 
@@ -45,18 +44,6 @@ class ArticleAdmin(LeafletGeoAdminMixin, TabbedTranslationAdmin):
     list_filter = ["published", "area"]
     search_fields = ["title"]
     inlines = [ArticleSpaceInline, ArticleLinkInline]
-
-
-@admin.register(PlanAnnotation)
-class PlanAnnotationAdmin(LeafletGeoAdmin):
-    list_display = ["__str__", "annotation_type", "area", "initial_article", "published"]
-    list_filter = ["annotation_type", "area", "published"]
-    autocomplete_fields = ["initial_article"]
-    fieldsets = [
-        (None, {"fields": ["area", "position", "annotation_type", "initial_article", "published"]}),
-        ("Resource", {"fields": ["pointcloud", "panorama", "textured_model", "image"]}),
-        ("Point cloud start view", {"fields": ["camera_position", "look_at"]}),
-    ]
 
 
 @admin.register(PointcloudAnnotation)

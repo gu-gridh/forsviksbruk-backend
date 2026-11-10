@@ -3,48 +3,10 @@ Forsviksbruk Viewer Tests
 """
 
 import pytest
-from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 from rest_framework import status
-from digicure_viewer.models import Panorama, PointCloud
-from .models import Area, Article, ArticleSpace, PlanAnnotation
-
-
-@pytest.mark.django_db
-class TestPlanAnnotation:
-    """Resource fields must match the type of annotation"""
-
-    def setup_method(self):
-        self.pointcloud = PointCloud.objects.create(title="Forge scan")
-
-    def test_matching_resource_is_valid(self):
-        annotation = PlanAnnotation(
-            position=Point(14.43, 58.97),
-            annotation_type=PlanAnnotation.Type.POINTCLOUD,
-            pointcloud=self.pointcloud,
-            camera_position=[1.0, 2.0, 3.0],
-            look_at=[0.0, 0.0, 0.0],
-        )
-        annotation.full_clean()
-        assert annotation.resource == self.pointcloud
-
-    def test_missing_resource_is_invalid(self):
-        annotation = PlanAnnotation(position=Point(0, 0), annotation_type=PlanAnnotation.Type.PANORAMA)
-        with pytest.raises(ValidationError) as error:
-            annotation.full_clean()
-        assert "panorama" in error.value.message_dict
-
-    def test_other_resource_is_invalid(self):
-        annotation = PlanAnnotation(
-            position=Point(0, 0),
-            annotation_type=PlanAnnotation.Type.PANORAMA,
-            panorama=Panorama.objects.create(title="Yard"),
-            pointcloud=self.pointcloud,
-        )
-        with pytest.raises(ValidationError) as error:
-            annotation.full_clean()
-        assert "pointcloud" in error.value.message_dict
+from .models import Area, Article, ArticleSpace
 
 
 @pytest.mark.django_db
