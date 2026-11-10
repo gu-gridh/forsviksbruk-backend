@@ -67,12 +67,12 @@ class TestArticleAPI:
         ArticleSpace.objects.create(article=self.article, order=1, text_sv="Text")
 
     def test_translated_title(self):
-        response = self.client.get(f"/sv/api/viewer/articles/{self.article.pk}/")
+        response = self.client.get(f"/sv/api/articles/{self.article.pk}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["title"] == "Hammaren"
         assert response.data["area_name"] == "Smedja"
         assert len(response.data["spaces"]) == 1
 
     def test_falls_back_to_swedish(self):
-        response = self.client.get(f"/de/api/viewer/articles/{self.article.pk}/")
+        response = self.client.get(f"/de/api/articles/{self.article.pk}/")
         assert response.data["title"] == "Hammaren"

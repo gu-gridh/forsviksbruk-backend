@@ -309,6 +309,7 @@ class PlanAnnotation(AbstractBaseModel):
     class Meta:
         verbose_name = _("Plan annotation")
         verbose_name_plural = _("Plan annotations")
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.get_annotation_type_display()}: {self.resource or '–'}"
@@ -360,6 +361,7 @@ class PointcloudAnnotation(AbstractBaseModel):
     class Meta:
         verbose_name = _("Point cloud annotation")
         verbose_name_plural = _("Point cloud annotations")
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.pointcloud} – {self.article}"

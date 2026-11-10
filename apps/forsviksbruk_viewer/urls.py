@@ -20,5 +20,5 @@ router.register(r"panorama", views.PanoramaViewSet, basename="panoramas")
 register_routes(router, ["image", "mesh"])
 
 urlpatterns = [
-    path("api/viewer/", include(router.urls)),
+    path("api/", include(router.urls)),
 ]
