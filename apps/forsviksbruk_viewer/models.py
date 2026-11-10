@@ -20,19 +20,21 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from forsviksbruk_backend.abstract.models import AbstractBaseModel
-from gridh_abstract.models import AbstractPlaceModel
 from digicure_viewer.models import Image, Object3js, Panorama, PointCloud, get_list_zeros
 
 MAX_ARTICLE_SPACES = 4
 MAX_ARTICLE_LINKS = 5
 
 
-class Area(AbstractBaseModel, AbstractPlaceModel):
+class Area(AbstractBaseModel):
     """
     A named area of the works, e.g. "Forge" or "Smithery".
-    Inherits name and coordinates from AbstractPlaceModel.
     """
 
+    name = models.CharField(
+        max_length=256,
+        verbose_name=_("Name"),
+    )
     description = models.TextField(
         blank=True,
         verbose_name=_("Description"),
@@ -100,6 +102,11 @@ class Article(AbstractBaseModel):
     title = models.CharField(
         max_length=256,
         verbose_name=_("Title"),
+    )
+    location = models.PointField(
+        null=True,
+        blank=True,
+        verbose_name=_("Place on map"),
     )
 
     class Meta:

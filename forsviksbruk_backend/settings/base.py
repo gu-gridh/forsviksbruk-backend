@@ -110,6 +110,7 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'ckeditor',
     'django_better_admin_arrayfield',
+    'leaflet',
 ]
 
 MIDDLEWARE = [
@@ -240,6 +241,27 @@ REST_FRAMEWORK = {
 
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# Admin map widget (django-leaflet), using the Forsvik plan tiles
+# Tiles exist for zoom 14-20 and are only served over https
+FORSVIK_TILES_URL = 'https://dh.gu.se/tiles/forsvik/{z}/{x}/{y}.png'
+LEAFLET_CONFIG = {
+    'DEFAULT_CENTER': (58.5795, 14.4348),
+    'DEFAULT_ZOOM': 16,
+    'MIN_ZOOM': 14,
+    'MAX_ZOOM': 22,
+    'TILES': [
+        ('Forsvik plan', FORSVIK_TILES_URL, {'attribution': '&copy; GRIDH', 'maxNativeZoom': 20, 'maxZoom': 22}),
+        ('OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {'attribution': '&copy; OpenStreetMap contributors', 'maxNativeZoom': 19, 'maxZoom': 22}),
+    ],
+    # The plan is drawn upside down, so rotate admin maps by 190 degrees (bearing set in forsvik-bearing.js).
+    # Admin map widgets only load the 'forms' plugin; django-leaflet prepends its own form scripts to it.
+    'PLUGINS': {
+        'forms': {
+            'js': ['leaflet-rotate/leaflet-rotate.js', 'leaflet-rotate/forsvik-bearing.js'],
+        },
+    },
+}
 
 # digicure_viewer
 DIGICURE_PLACE_MODEL = 'forsviksbruk_viewer.Area'

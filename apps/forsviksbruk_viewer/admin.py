@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.contrib.gis.admin import GISModelAdmin
+from leaflet.admin import LeafletGeoAdmin, LeafletGeoAdminMixin
 from modeltranslation.admin import TabbedTranslationAdmin, TranslationTabularInline, TranslationStackedInline
 
 from .models import (
@@ -16,7 +16,7 @@ from .models import (
 
 
 @admin.register(Area)
-class AreaAdmin(GISModelAdmin, TabbedTranslationAdmin):
+class AreaAdmin(TabbedTranslationAdmin):
     list_display = ["name", "published", "created_at"]
     list_filter = ["published"]
     search_fields = ["name", "description"]
@@ -40,7 +40,7 @@ class ArticleLinkInline(TranslationTabularInline):
 
 
 @admin.register(Article)
-class ArticleAdmin(TabbedTranslationAdmin):
+class ArticleAdmin(LeafletGeoAdminMixin, TabbedTranslationAdmin):
     list_display = ["title", "area", "published", "updated_at"]
     list_filter = ["published", "area"]
     search_fields = ["title"]
@@ -48,7 +48,7 @@ class ArticleAdmin(TabbedTranslationAdmin):
 
 
 @admin.register(PlanAnnotation)
-class PlanAnnotationAdmin(GISModelAdmin):
+class PlanAnnotationAdmin(LeafletGeoAdmin):
     list_display = ["__str__", "annotation_type", "area", "initial_article", "published"]
     list_filter = ["annotation_type", "area", "published"]
     autocomplete_fields = ["initial_article"]

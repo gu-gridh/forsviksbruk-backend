@@ -11,10 +11,9 @@ from forsviksbruk_backend.abstract.serializers import GenericSerializer, Dynamic
 from .models import Area, Article, ArticleLink, ArticleSpace, Page, PlanAnnotation, PointcloudAnnotation
 
 
-class AreaSerializer(GeoFeatureModelSerializer):
-    class Meta:
+class AreaSerializer(GenericSerializer):
+    class Meta(GenericSerializer.Meta):
         model = Area
-        geo_field = "coordinates"
         fields = ["id", "name", "description"]
 
 
@@ -43,7 +42,7 @@ class ArticleSerializer(DynamicDepthSerializer):
 
     class Meta(DynamicDepthSerializer.Meta):
         model = Article
-        fields = ["id", "area", "area_name", "title", "spaces", "links"]
+        fields = ["id", "area", "area_name", "title", "location", "spaces", "links"]
 
 
 class PlanAnnotationSerializer(GeoFeatureModelSerializer):

@@ -19,13 +19,11 @@ from .serializers import (
 )
 
 
-class AreaViewSet(GeoViewSet):
+class AreaViewSet(DynamicDepthViewSet):
     """API endpoint for areas (e.g. Forge, Smithery)"""
     queryset = Area.objects.filter(published=True)
     serializer_class = AreaSerializer
-    bbox_filter_field = "coordinates"
     filterset_fields = ["id"]
-    search_fields = ["name"]
 
 
 class PageViewSet(DynamicDepthViewSet):
