@@ -58,10 +58,17 @@ class ArticleSerializer(DynamicDepthSerializer):
     spaces = ArticleSpaceSerializer(many=True, read_only=True)
     links = ArticleLinkSerializer(many=True, read_only=True)
     advanced_media = ArticleMediaSerializer(read_only=True, default=None)
+    location = serializers.SerializerMethodField()
 
     class Meta(DynamicDepthSerializer.Meta):
         model = Article
         fields = ["id", "area", "area_name", "title", "location", "spaces", "links", "advanced_media"]
+
+    def get_location(self, obj):
+        """Place on the map as {"lat": ..., "lng": ...} (Leaflet order), or None."""
+        if obj.location is None:
+            return None
+        return {"lat": obj.location.y, "lng": obj.location.x}
 
 
 class PointcloudAnnotationSerializer(DynamicDepthSerializer):

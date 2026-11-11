@@ -3,6 +3,7 @@ Forsviksbruk Viewer Tests
 """
 
 import pytest
+from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -81,3 +82,9 @@ class TestArticleAPI:
     def test_falls_back_to_swedish(self):
         response = self.client.get(f"/de/api/articles/{self.article.pk}/")
         assert response.data["title"] == "Hammaren"
+
+    def test_location_is_lat_lng(self):
+        self.article.location = Point(14.4371, 58.5844, srid=4326)
+        self.article.save()
+        response = self.client.get(f"/sv/api/articles/{self.article.pk}/")
+        assert response.data["location"] == {"lat": 58.5844, "lng": 14.4371}
