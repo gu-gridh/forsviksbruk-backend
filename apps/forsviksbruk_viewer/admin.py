@@ -33,8 +33,11 @@ def _hide_from_index(model_admin):
     model_admin.get_model_perms = lambda request: {}
 
 
-for _model in (Author, TypeOfImage, Image, Object3js, Panorama, PointCloud, ThreeDHop, RTI):
+for _model in (Author, TypeOfImage, Image, Object3js, Panorama, PointCloud):
     _hide_from_index(admin.site._registry[_model])
+
+# 3D Hop and RTI are not used in this project
+admin.site.unregister([ThreeDHop, RTI])
 
 
 @admin.register(Area)

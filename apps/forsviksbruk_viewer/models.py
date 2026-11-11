@@ -20,7 +20,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from forsviksbruk_backend.abstract.models import AbstractBaseModel
-from digicure_viewer.models import RTI, Image, Object3js, Panorama, PointCloud, ThreeDHop, get_list_zeros
+from digicure_viewer.models import Image, Object3js, Panorama, PointCloud, get_list_zeros
 
 MAX_ARTICLE_SPACES = 4
 MAX_ARTICLE_LINKS = 5
@@ -222,7 +222,7 @@ class ArticleMedia(models.Model):
     """
 
     # Resource fields in the order they are shown in the admin
-    RESOURCE_FIELDS = ["image", "panorama", "pointcloud", "threedhop", "rti", "textured_model"]
+    RESOURCE_FIELDS = ["image", "panorama", "pointcloud", "textured_model"]
 
     article = models.ForeignKey(
         Article,
@@ -257,22 +257,6 @@ class ArticleMedia(models.Model):
         blank=True,
         related_name="article_media",
         verbose_name=_("Point cloud"),
-    )
-    threedhop = models.ForeignKey(
-        ThreeDHop,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="article_media",
-        verbose_name=_("3D Hop"),
-    )
-    rti = models.ForeignKey(
-        RTI,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="article_media",
-        verbose_name=_("RTI"),
     )
     textured_model = models.ForeignKey(
         Object3js,
