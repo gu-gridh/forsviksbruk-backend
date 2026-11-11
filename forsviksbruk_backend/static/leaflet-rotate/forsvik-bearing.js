@@ -21,4 +21,10 @@
             return initialize.call(this, id, L.extend({}, FORSVIK_ROTATION, options));
         },
     });
+
+    // When a marker gets focus (e.g. Leaflet.draw's marker under the cursor on
+    // mouse down), Leaflet pans the map to keep it in view. On a rotated map
+    // leaflet-rotate's panInside miscalculates that pan, the map slides away and
+    // the new point is placed in the wrong spot, so turn the focus pan off.
+    L.Marker.mergeOptions({autoPanOnFocus: false});
 })();
