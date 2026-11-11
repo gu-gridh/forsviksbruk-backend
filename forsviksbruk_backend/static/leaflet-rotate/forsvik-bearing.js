@@ -8,7 +8,7 @@
 (function () {
     var FORSVIK_ROTATION = {
         rotate: true,
-        bearing: 190,
+        bearing: 20,
         touchRotate: false,
         rotateControl: {
             closeOnZeroBearing: false,
