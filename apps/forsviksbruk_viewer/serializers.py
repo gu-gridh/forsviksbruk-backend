@@ -53,6 +53,7 @@ class ArticleMediaSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(DynamicDepthSerializer):
+    area = serializers.PrimaryKeyRelatedField(read_only=True)
     area_name = serializers.CharField(source="area.name", read_only=True, default=None)
     spaces = ArticleSpaceSerializer(many=True, read_only=True)
     links = ArticleLinkSerializer(many=True, read_only=True)

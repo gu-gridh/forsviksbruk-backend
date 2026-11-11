@@ -11,6 +11,7 @@ from .models import (
     MAX_ARTICLE_SPACES,
     Area,
     Article,
+    ArticleArea,
     ArticleLink,
     ArticleMedia,
     ArticleSpace,
@@ -42,14 +43,30 @@ admin.site.unregister([ThreeDHop, RTI])
 
 @admin.register(Area)
 class AreaAdmin(TabbedTranslationAdmin):
+    """Areas are chosen, created ("+") and edited (pencil) from the Article page,
+    so they are hidden from the sidebar."""
     list_display = ["name", "published", "created_at"]
     list_filter = ["published"]
     search_fields = ["name", "description"]
+
+    def get_model_perms(self, request):
+        return {}
 
 
 @admin.register(Page)
 class PageAdmin(TabbedTranslationAdmin):
     list_display = ["slug", "title", "published"]
+
+
+class ArticleAreaInline(admin.TabularInline):
+    """Choose an existing area, or create a new one with "+" (edit it with the pencil)."""
+    model = ArticleArea
+    fields = ["area"]
+    autocomplete_fields = ["area"]
+    extra = 1
+    max_num = 1
+    verbose_name = "Area"
+    verbose_name_plural = "Area"
 
 
 class ArticleSpaceInline(TranslationStackedInline):
@@ -67,7 +84,7 @@ class ArticleLinkInline(TranslationTabularInline):
 class ArticleMediaInline(admin.StackedInline):
     """
     Choose an existing Digicure resource, or upload a new one with the "+" button.
-    New resources get the article's area as their place.
+    On save, every resource is linked to the article's area.
     """
     model = ArticleMedia
     extra = 0
@@ -80,18 +97,15 @@ class ArticleMediaInline(admin.StackedInline):
 @admin.register(Article)
 class ArticleAdmin(LeafletGeoAdminMixin, TabbedTranslationAdmin):
     list_display = ["title", "area", "published", "updated_at"]
-    list_filter = ["published", "area"]
-    search_fields = ["title"]
-    inlines = [ArticleMediaInline, ArticleSpaceInline, ArticleLinkInline]
+    list_filter = ["published", ("area_link__area", admin.RelatedOnlyFieldListFilter)]
+    search_fields = ["title", "area_link__area__name"]
+    inlines = [ArticleAreaInline, ArticleMediaInline, ArticleSpaceInline, ArticleLinkInline]
 
-    class Media:
-        js = ["forsviksbruk_viewer/article-media.js"]
-
-    def save_formset(self, request, form, formset, change):
-        super().save_formset(request, form, formset, change)
-        if formset.model is ArticleMedia:
-            for media in formset.instance.media.all():
-                media.link_to_area(formset.instance.area)
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        link = ArticleArea.objects.filter(article=form.instance).select_related("area").first()
+        for media in form.instance.media.all():
+            media.link_to_area(link.area if link else None)
 
 
 @admin.register(PointcloudAnnotation)

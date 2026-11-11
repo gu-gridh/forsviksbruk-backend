@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 from rest_framework import status
 from digicure_viewer.models import Image, Panorama, PointCloud
-from .models import Area, Article, ArticleMedia, ArticleSpace
+from .models import Area, Article, ArticleArea, ArticleMedia, ArticleSpace
 
 
 @pytest.mark.django_db
@@ -26,7 +26,8 @@ class TestArticleMedia:
 
     def setup_method(self):
         self.area = Area.objects.create(name="Smedja")
-        self.article = Article.objects.create(area=self.area, title="Hammaren")
+        self.article = Article.objects.create(title="Hammaren")
+        ArticleArea.objects.create(article=self.article, area=self.area)
 
     def test_one_resource_is_valid(self):
         media = ArticleMedia(article=self.article, panorama=Panorama.objects.create(title="Yard"))
@@ -63,7 +64,8 @@ class TestArticleAPI:
     def setup_method(self):
         self.client = APIClient()
         area = Area.objects.create(name_sv="Smedja", name_en="Forge")
-        self.article = Article.objects.create(area=area, title_sv="Hammaren", title_en="The hammer")
+        self.article = Article.objects.create(title_sv="Hammaren", title_en="The hammer")
+        ArticleArea.objects.create(article=self.article, area=area)
         ArticleSpace.objects.create(article=self.article, order=1, text_sv="Text")
 
     def test_translated_title(self):

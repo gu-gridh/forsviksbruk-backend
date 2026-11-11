@@ -4,6 +4,7 @@ Forsviksbruk Viewer Views
 Read-only API endpoints for the multimodal map and the Digicure viewer.
 """
 
+import django_filters
 from digicure_viewer import views as digicure_views
 from digicure_viewer.models import PointCloud
 from digicure_viewer.serializers import PointCloudSerializer
@@ -32,13 +33,22 @@ class PageViewSet(DynamicDepthViewSet):
     filterset_fields = ["slug"]
 
 
+class ArticleFilter(django_filters.FilterSet):
+    """Filter articles with ?area=<id>"""
+    area = django_filters.NumberFilter(field_name="area_link__area")
+
+    class Meta:
+        model = Article
+        fields = ["area"]
+
+
 class ArticleViewSet(DynamicDepthViewSet):
     """API endpoint for mini-articles including their spaces, links and media"""
-    queryset = Article.objects.filter(published=True).prefetch_related(
+    queryset = Article.objects.filter(published=True).select_related("area_link__area").prefetch_related(
         "spaces", "links", *(f"media__{field}" for field in ArticleMedia.RESOURCE_FIELDS)
     )
     serializer_class = ArticleSerializer
-    filterset_fields = ["area"]
+    filterset_class = ArticleFilter
 
 
 class PointcloudAnnotationViewSet(DynamicDepthViewSet):

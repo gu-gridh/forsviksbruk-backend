@@ -6,6 +6,7 @@ Data model for the multimodal map and the Digicure viewer:
 - Area: named area on the plan (e.g. "Forge"), used as DIGICURE_PLACE_MODEL
 - Page: static texts for start, guide and about pages
 - Article: mini-article shown next to the Digicure viewer
+- ArticleArea: links an article to its area (an area can be shared by several articles)
 - ArticleSpace / ArticleLink: up to 4 content spaces and 5 end-space URLs
 - ArticleMedia: Digicure resource (image, panorama, point cloud, ...) shown with an article
 - PointcloudAnnotation: annotation symbol inside a point cloud
@@ -29,6 +30,7 @@ MAX_ARTICLE_LINKS = 5
 class Area(AbstractBaseModel):
     """
     A named area of the works, e.g. "Forge" or "Smithery".
+    Several articles can share an area; it is chosen or created on the article.
     """
 
     name = models.CharField(
@@ -91,14 +93,6 @@ class Article(AbstractBaseModel):
     Content is split into up to 4 spaces and an end space with up to 5 URLs.
     """
 
-    area = models.ForeignKey(
-        Area,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="articles",
-        verbose_name=_("Area"),
-    )
     title = models.CharField(
         max_length=256,
         verbose_name=_("Title"),
@@ -112,10 +106,43 @@ class Article(AbstractBaseModel):
     class Meta:
         verbose_name = _("Article")
         verbose_name_plural = _("Articles")
-        ordering = ["area__name", "title"]
+        ordering = ["area_link__area__name", "title"]
 
     def __str__(self):
         return self.title
+
+    @property
+    def area(self):
+        """The article's area (set in the Area inline), or None."""
+        link = getattr(self, "area_link", None)
+        return link.area if link else None
+
+
+class ArticleArea(models.Model):
+    """
+    Links an article to its area. Shown as the "Area" inline on the article,
+    where an existing area is chosen or a new one created with "+".
+    """
+
+    article = models.OneToOneField(
+        Article,
+        on_delete=models.CASCADE,
+        related_name="area_link",
+        verbose_name=_("Article"),
+    )
+    area = models.ForeignKey(
+        Area,
+        on_delete=models.CASCADE,
+        related_name="article_links",
+        verbose_name=_("Area"),
+    )
+
+    class Meta:
+        verbose_name = _("Area")
+        verbose_name_plural = _("Area")
+
+    def __str__(self):
+        return str(self.area)
 
 
 class ArticleSpace(models.Model):
