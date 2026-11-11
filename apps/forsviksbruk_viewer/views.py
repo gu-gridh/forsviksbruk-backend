@@ -43,10 +43,10 @@ class ArticleFilter(django_filters.FilterSet):
 
 
 class ArticleViewSet(DynamicDepthViewSet):
-    """API endpoint for mini-articles including their spaces, links and media"""
-    queryset = Article.objects.filter(published=True).select_related("area_link__area").prefetch_related(
-        "spaces", "links", *(f"media__{field}" for field in ArticleMedia.RESOURCE_FIELDS)
-    )
+    """API endpoint for mini-articles including their area, spaces, links and advanced media"""
+    queryset = Article.objects.filter(published=True).select_related(
+        "area_link__area", *(f"advanced_media__{field}" for field in ArticleMedia.RESOURCE_FIELDS)
+    ).prefetch_related("spaces", "links")
     serializer_class = ArticleSerializer
     filterset_class = ArticleFilter
 

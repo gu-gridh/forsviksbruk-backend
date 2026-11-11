@@ -8,7 +8,7 @@ Data model for the multimodal map and the Digicure viewer:
 - Article: mini-article shown next to the Digicure viewer
 - ArticleArea: links an article to its area (an area can be shared by several articles)
 - ArticleSpace / ArticleLink: up to 4 content spaces and 5 end-space URLs
-- ArticleMedia: Digicure resource (image, panorama, point cloud, ...) shown with an article
+- ArticleMedia: the article's one "advanced media" (image, panorama, point cloud or textured model)
 - PointcloudAnnotation: annotation symbol inside a point cloud
 
 Media resources (PointCloud, Panorama, Object3js, Image) come from digicure_viewer.
@@ -244,22 +244,29 @@ class ArticleLink(models.Model):
 
 class ArticleMedia(models.Model):
     """
-    Digicure resource shown with an article. Exactly one resource is set;
-    on save in the admin the resource is linked to the article's area.
+    The article's advanced media: one Digicure resource of the chosen type.
+    On save in the admin the resource is linked to the article's area.
     """
 
-    # Resource fields in the order they are shown in the admin
-    RESOURCE_FIELDS = ["image", "panorama", "pointcloud", "textured_model"]
+    class Type(models.TextChoices):
+        IMAGE = "image", _("Image")
+        PANORAMA = "panorama", _("Panorama")
+        POINTCLOUD = "pointcloud", _("Point cloud")
+        TEXTURED_MODEL = "textured_model", _("Textured model")
 
-    article = models.ForeignKey(
+    # Resource field for each type; the field names equal the type values
+    RESOURCE_FIELDS = [choice.value for choice in Type]
+
+    article = models.OneToOneField(
         Article,
         on_delete=models.CASCADE,
-        related_name="media",
+        related_name="advanced_media",
         verbose_name=_("Article"),
     )
-    order = models.PositiveSmallIntegerField(
-        default=1,
-        verbose_name=_("Order"),
+    media_type = models.CharField(
+        max_length=32,
+        choices=Type.choices,
+        verbose_name=_("Type of media"),
     )
     image = models.ForeignKey(
         Image,
@@ -295,28 +302,23 @@ class ArticleMedia(models.Model):
     )
 
     class Meta:
-        verbose_name = _("Media")
-        verbose_name_plural = _("Media")
-        ordering = ["article", "order", "id"]
+        verbose_name = _("Advanced media")
+        verbose_name_plural = _("Advanced media")
 
     def __str__(self):
-        return f"{self.media_type or '–'}: {self.resource or '–'}"
-
-    @property
-    def media_type(self):
-        for field in self.RESOURCE_FIELDS:
-            if getattr(self, f"{field}_id") is not None:
-                return field
-        return None
+        return f"{self.get_media_type_display()}: {self.resource or '–'}"
 
     @property
     def resource(self):
         return getattr(self, self.media_type) if self.media_type else None
 
     def clean(self):
-        selected = [field for field in self.RESOURCE_FIELDS if getattr(self, f"{field}_id") is not None]
-        if len(selected) != 1:
-            raise ValidationError(_("Choose or upload exactly one media resource."))
+        # Only the resource of the chosen type is kept; values left in the hidden fields are dropped
+        for field in self.RESOURCE_FIELDS:
+            if field != self.media_type:
+                setattr(self, field, None)
+        if self.media_type and getattr(self, f"{self.media_type}_id") is None:
+            raise ValidationError({self.media_type: _("Choose or upload the media.")})
 
     def link_to_area(self, area):
         """Make the resource belong to the given area (Digicure 'place')."""

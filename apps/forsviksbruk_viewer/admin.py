@@ -20,7 +20,7 @@ from .models import (
 )
 
 
-# Digicure media is managed from the Media inline on articles. Its admins stay
+# Digicure media is managed from the Advanced media inline on articles. Its admins stay
 # registered, because the inline's add/edit popups and autocomplete use them,
 # but they are hidden from the admin index and sidebar.
 @admin.register(Object3js)
@@ -83,15 +83,20 @@ class ArticleLinkInline(TranslationTabularInline):
 
 class ArticleMediaInline(admin.StackedInline):
     """
-    Choose an existing Digicure resource, or upload a new one with the "+" button.
-    On save, every resource is linked to the article's area.
+    One advanced media per article: choose the type, then choose an existing
+    resource of that type or upload a new one with "+".
     """
     model = ArticleMedia
-    extra = 0
-    fields = ["order", *ArticleMedia.RESOURCE_FIELDS]
+    fields = ["media_type", *ArticleMedia.RESOURCE_FIELDS]
     autocomplete_fields = ArticleMedia.RESOURCE_FIELDS
-    verbose_name = "Media"
-    verbose_name_plural = "Media"
+    extra = 1
+    max_num = 1
+    verbose_name = "Advanced media"
+    verbose_name_plural = "Advanced media"
+
+    class Media:
+        # Shows only the field of the chosen type
+        js = ["forsviksbruk_viewer/advanced-media.js"]
 
 
 @admin.register(Article)
@@ -104,7 +109,8 @@ class ArticleAdmin(LeafletGeoAdminMixin, TabbedTranslationAdmin):
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         link = ArticleArea.objects.filter(article=form.instance).select_related("area").first()
-        for media in form.instance.media.all():
+        media = ArticleMedia.objects.filter(article=form.instance).first()
+        if media:
             media.link_to_area(link.area if link else None)
 
 

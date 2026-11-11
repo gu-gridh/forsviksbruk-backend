@@ -35,7 +35,7 @@ class ArticleLinkSerializer(serializers.ModelSerializer):
 
 
 class ArticleMediaSerializer(serializers.ModelSerializer):
-    """One media resource: its type (image, panorama, pointcloud, ...), id and title.
+    """The advanced media: its type (image, panorama, pointcloud, textured_model), id and title.
     The full resource is available from its own endpoint."""
     type = serializers.CharField(source="media_type", read_only=True)
     id = serializers.SerializerMethodField()
@@ -43,7 +43,7 @@ class ArticleMediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ArticleMedia
-        fields = ["order", "type", "id", "title"]
+        fields = ["type", "id", "title"]
 
     def get_id(self, obj):
         return obj.resource.pk if obj.resource else None
@@ -57,11 +57,11 @@ class ArticleSerializer(DynamicDepthSerializer):
     area_name = serializers.CharField(source="area.name", read_only=True, default=None)
     spaces = ArticleSpaceSerializer(many=True, read_only=True)
     links = ArticleLinkSerializer(many=True, read_only=True)
-    media = ArticleMediaSerializer(many=True, read_only=True)
+    advanced_media = ArticleMediaSerializer(read_only=True, default=None)
 
     class Meta(DynamicDepthSerializer.Meta):
         model = Article
-        fields = ["id", "area", "area_name", "title", "location", "spaces", "links", "media"]
+        fields = ["id", "area", "area_name", "title", "location", "spaces", "links", "advanced_media"]
 
 
 class PointcloudAnnotationSerializer(DynamicDepthSerializer):

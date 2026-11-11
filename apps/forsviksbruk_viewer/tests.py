@@ -22,37 +22,39 @@ class TestArticleSpace:
 
 @pytest.mark.django_db
 class TestArticleMedia:
-    """Exactly one resource per media row, linked to the article's area"""
+    """One resource of the chosen type, linked to the article's area"""
 
     def setup_method(self):
         self.area = Area.objects.create(name="Smedja")
         self.article = Article.objects.create(title="Hammaren")
         ArticleArea.objects.create(article=self.article, area=self.area)
 
-    def test_one_resource_is_valid(self):
-        media = ArticleMedia(article=self.article, panorama=Panorama.objects.create(title="Yard"))
+    def test_resource_of_chosen_type_is_valid(self):
+        media = ArticleMedia(article=self.article, media_type="panorama", panorama=Panorama.objects.create(title="Yard"))
         media.full_clean()
-        assert media.media_type == "panorama"
+        assert media.resource.title == "Yard"
 
-    def test_no_resource_is_invalid(self):
-        with pytest.raises(ValidationError):
-            ArticleMedia(article=self.article).full_clean()
+    def test_missing_resource_is_invalid(self):
+        with pytest.raises(ValidationError) as error:
+            ArticleMedia(article=self.article, media_type="panorama").full_clean()
+        assert "panorama" in error.value.message_dict
 
-    def test_two_resources_are_invalid(self):
+    def test_other_types_are_dropped(self):
         media = ArticleMedia(
             article=self.article,
+            media_type="panorama",
             panorama=Panorama.objects.create(title="Yard"),
             pointcloud=PointCloud.objects.create(title="Forge scan"),
         )
-        with pytest.raises(ValidationError):
-            media.full_clean()
+        media.full_clean()
+        assert media.pointcloud is None
 
     def test_link_to_area(self):
         panorama = Panorama.objects.create(title="Yard")
         image = Image(title="Photo")
         image.save()
-        for resource in ({"panorama": panorama}, {"image": image}):
-            ArticleMedia.objects.create(article=self.article, **resource).link_to_area(self.area)
+        ArticleMedia(article=self.article, media_type="panorama", panorama=panorama).link_to_area(self.area)
+        ArticleMedia(article=self.article, media_type="image", image=image).link_to_area(self.area)
         assert list(panorama.place.all()) == [self.area]
         image.refresh_from_db()
         assert image.place == self.area
@@ -74,7 +76,7 @@ class TestArticleAPI:
         assert response.data["title"] == "Hammaren"
         assert response.data["area_name"] == "Smedja"
         assert len(response.data["spaces"]) == 1
-        assert response.data["media"] == []
+        assert response.data["advanced_media"] is None
 
     def test_falls_back_to_swedish(self):
         response = self.client.get(f"/de/api/articles/{self.article.pk}/")
