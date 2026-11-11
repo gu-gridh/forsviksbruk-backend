@@ -6,7 +6,8 @@ import pytest
 from django.core.exceptions import ValidationError
 from rest_framework.test import APIClient
 from rest_framework import status
-from .models import Area, Article, ArticleSpace
+from digicure_viewer.models import Image, Panorama, PointCloud
+from .models import Area, Article, ArticleMedia, ArticleSpace
 
 
 @pytest.mark.django_db
@@ -17,6 +18,43 @@ class TestArticleSpace:
         space = ArticleSpace(article=article, order=1, video_url="https://example.org/video", image="a.jpg")
         with pytest.raises(ValidationError):
             space.full_clean()
+
+
+@pytest.mark.django_db
+class TestArticleMedia:
+    """Exactly one resource per media row, linked to the article's area"""
+
+    def setup_method(self):
+        self.area = Area.objects.create(name="Smedja")
+        self.article = Article.objects.create(area=self.area, title="Hammaren")
+
+    def test_one_resource_is_valid(self):
+        media = ArticleMedia(article=self.article, panorama=Panorama.objects.create(title="Yard"))
+        media.full_clean()
+        assert media.media_type == "panorama"
+
+    def test_no_resource_is_invalid(self):
+        with pytest.raises(ValidationError):
+            ArticleMedia(article=self.article).full_clean()
+
+    def test_two_resources_are_invalid(self):
+        media = ArticleMedia(
+            article=self.article,
+            panorama=Panorama.objects.create(title="Yard"),
+            pointcloud=PointCloud.objects.create(title="Forge scan"),
+        )
+        with pytest.raises(ValidationError):
+            media.full_clean()
+
+    def test_link_to_area(self):
+        panorama = Panorama.objects.create(title="Yard")
+        image = Image(title="Photo")
+        image.save()
+        for resource in ({"panorama": panorama}, {"image": image}):
+            ArticleMedia.objects.create(article=self.article, **resource).link_to_area(self.area)
+        assert list(panorama.place.all()) == [self.area]
+        image.refresh_from_db()
+        assert image.place == self.area
 
 
 @pytest.mark.django_db
@@ -34,6 +72,7 @@ class TestArticleAPI:
         assert response.data["title"] == "Hammaren"
         assert response.data["area_name"] == "Smedja"
         assert len(response.data["spaces"]) == 1
+        assert response.data["media"] == []
 
     def test_falls_back_to_swedish(self):
         response = self.client.get(f"/de/api/articles/{self.article.pk}/")

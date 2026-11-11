@@ -7,6 +7,7 @@ Data model for the multimodal map and the Digicure viewer:
 - Page: static texts for start, guide and about pages
 - Article: mini-article shown next to the Digicure viewer
 - ArticleSpace / ArticleLink: up to 4 content spaces and 5 end-space URLs
+- ArticleMedia: Digicure resource (image, panorama, point cloud, ...) shown with an article
 - PointcloudAnnotation: annotation symbol inside a point cloud
 
 Media resources (PointCloud, Panorama, Object3js, Image) come from digicure_viewer.
@@ -19,7 +20,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from forsviksbruk_backend.abstract.models import AbstractBaseModel
-from digicure_viewer.models import PointCloud, get_list_zeros
+from digicure_viewer.models import RTI, Image, Object3js, Panorama, PointCloud, ThreeDHop, get_list_zeros
 
 MAX_ARTICLE_SPACES = 4
 MAX_ARTICLE_LINKS = 5
@@ -212,6 +213,111 @@ class ArticleLink(models.Model):
 
     def __str__(self):
         return self.label or self.url
+
+
+class ArticleMedia(models.Model):
+    """
+    Digicure resource shown with an article. Exactly one resource is set;
+    on save in the admin the resource is linked to the article's area.
+    """
+
+    # Resource fields in the order they are shown in the admin
+    RESOURCE_FIELDS = ["image", "panorama", "pointcloud", "threedhop", "rti", "textured_model"]
+
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name="media",
+        verbose_name=_("Article"),
+    )
+    order = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name=_("Order"),
+    )
+    image = models.ForeignKey(
+        Image,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("Image"),
+    )
+    panorama = models.ForeignKey(
+        Panorama,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("Panorama"),
+    )
+    pointcloud = models.ForeignKey(
+        PointCloud,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("Point cloud"),
+    )
+    threedhop = models.ForeignKey(
+        ThreeDHop,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("3D Hop"),
+    )
+    rti = models.ForeignKey(
+        RTI,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("RTI"),
+    )
+    textured_model = models.ForeignKey(
+        Object3js,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="article_media",
+        verbose_name=_("Textured model"),
+    )
+
+    class Meta:
+        verbose_name = _("Media")
+        verbose_name_plural = _("Media")
+        ordering = ["article", "order", "id"]
+
+    def __str__(self):
+        return f"{self.media_type or '–'}: {self.resource or '–'}"
+
+    @property
+    def media_type(self):
+        for field in self.RESOURCE_FIELDS:
+            if getattr(self, f"{field}_id") is not None:
+                return field
+        return None
+
+    @property
+    def resource(self):
+        return getattr(self, self.media_type) if self.media_type else None
+
+    def clean(self):
+        selected = [field for field in self.RESOURCE_FIELDS if getattr(self, f"{field}_id") is not None]
+        if len(selected) != 1:
+            raise ValidationError(_("Choose or upload exactly one media resource."))
+
+    def link_to_area(self, area):
+        """Make the resource belong to the given area (Digicure 'place')."""
+        resource = self.resource
+        if area is None or resource is None:
+            return
+        if isinstance(resource, Image):
+            if resource.place_id is None:
+                resource.place = area
+                resource.save(update_fields=["place"])
+        else:
+            resource.place.add(area)
 
 
 class PointcloudAnnotation(AbstractBaseModel):

@@ -9,7 +9,7 @@ from digicure_viewer.models import PointCloud
 from digicure_viewer.serializers import PointCloudSerializer
 from forsviksbruk_backend.abstract.views import DynamicDepthViewSet
 
-from .models import Area, Article, Page, PointcloudAnnotation
+from .models import Area, Article, ArticleMedia, Page, PointcloudAnnotation
 from .serializers import (
     AreaSerializer,
     ArticleSerializer,
@@ -33,8 +33,10 @@ class PageViewSet(DynamicDepthViewSet):
 
 
 class ArticleViewSet(DynamicDepthViewSet):
-    """API endpoint for mini-articles including their spaces and links"""
-    queryset = Article.objects.filter(published=True).prefetch_related("spaces", "links")
+    """API endpoint for mini-articles including their spaces, links and media"""
+    queryset = Article.objects.filter(published=True).prefetch_related(
+        "spaces", "links", *(f"media__{field}" for field in ArticleMedia.RESOURCE_FIELDS)
+    )
     serializer_class = ArticleSerializer
     filterset_fields = ["area"]
 
