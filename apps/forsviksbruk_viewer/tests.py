@@ -88,3 +88,10 @@ class TestArticleAPI:
         self.article.save()
         response = self.client.get(f"/sv/api/articles/{self.article.pk}/")
         assert response.data["location"] == {"lat": 58.5844, "lng": 14.4371}
+
+    def test_advanced_media_urls(self):
+        panorama = Panorama.objects.create(title="Yard", url_public="https://example.org/panorama/yard/")
+        ArticleMedia.objects.create(article=self.article, media_type="panorama", panorama=panorama)
+        media = self.client.get(f"/sv/api/articles/{self.article.pk}/").data["advanced_media"]
+        assert media["url"] == "https://example.org/panorama/yard/"
+        assert media["iiif_url"] is None
