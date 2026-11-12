@@ -13,6 +13,7 @@ from forsviksbruk_backend.abstract.views import DynamicDepthViewSet
 from .models import Area, Article, ArticleMedia, Page, PointcloudAnnotation
 from .serializers import (
     AreaSerializer,
+    ArticleInfoSerializer,
     ArticleSerializer,
     PageSerializer,
     PointcloudAnnotationSerializer,
@@ -49,6 +50,33 @@ class ArticleViewSet(DynamicDepthViewSet):
     ).prefetch_related("spaces", "links")
     serializer_class = ArticleSerializer
     filterset_class = ArticleFilter
+
+
+class ArticleInfoFilter(ArticleFilter):
+    """Filter with ?id=<id> (or ?area=<id>)"""
+
+    class Meta(ArticleFilter.Meta):
+        fields = ["id", "area"]
+
+
+class ArticleInfoViewSet(DynamicDepthViewSet):
+    """
+    API endpoint with all details of articles: area, content spaces, links,
+    advanced media with its metadata and point cloud annotations.
+    Get one article with ?id=<id> (or /api/article_info/<id>/).
+    """
+    queryset = ArticleViewSet.queryset.prefetch_related(
+        "pointcloud_annotations",
+        "advanced_media__image__type_of_image",
+        "advanced_media__image__author",
+        "advanced_media__panorama__author",
+        "advanced_media__pointcloud__author",
+        "advanced_media__pointcloud__technique",
+        "advanced_media__textured_model__author",
+        "advanced_media__textured_model__technique",
+    )
+    serializer_class = ArticleInfoSerializer
+    filterset_class = ArticleInfoFilter
 
 
 class PointcloudAnnotationViewSet(DynamicDepthViewSet):
