@@ -269,7 +269,11 @@ DIGICURE_PLACE_MODEL = 'forsviksbruk_viewer.Area'
 MIGRATION_MODULES = {
     'digicure_viewer': 'forsviksbruk_backend.digicure_migrations',
 }
+# IIIF server base URL for files under MEDIA_ROOT (e.g. https://img.dh.gu.se/forsviksbruk/media/)
 IIIF_URL = os.getenv('IIIF_URL', '')
+# Public URL of MEDIA_ROOT/panorama/, where the image processor writes panorama tiles
 PANORAMA_PUBLIC_BASE_URL = os.getenv('PANORAMA_PUBLIC_BASE_URL', '')
+# Panorama processing jobs are only submitted when this is true
+IMAGE_PROCESSOR_ENABLED = os.getenv('IMAGE_PROCESSOR_ENABLED', 'false').lower() in ('1', 'true', 'yes')
 IMAGE_PROCESSOR_URL = os.getenv('IMAGE_PROCESSOR_URL', '')
 IMAGE_PROCESSOR_TOKEN = os.getenv('IMAGE_PROCESSOR_TOKEN', '')
