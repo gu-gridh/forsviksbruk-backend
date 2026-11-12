@@ -254,7 +254,9 @@ class ArticleMedia(models.Model):
         POINTCLOUD = "pointcloud", _("Point cloud")
         TEXTURED_MODEL = "textured_model", _("Textured model")
 
-    # Resource field for each type; the field names equal the type values
+    # Resource field for each type; the field names equal the type values.
+    # SET_NULL (not CASCADE) so the admin shows a delete button next to each
+    # field: deleting a resource just empties the field.
     RESOURCE_FIELDS = [choice.value for choice in Type]
 
     article = models.OneToOneField(
@@ -270,7 +272,7 @@ class ArticleMedia(models.Model):
     )
     image = models.ForeignKey(
         Image,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="article_media",
@@ -278,7 +280,7 @@ class ArticleMedia(models.Model):
     )
     panorama = models.ForeignKey(
         Panorama,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="article_media",
@@ -286,7 +288,7 @@ class ArticleMedia(models.Model):
     )
     pointcloud = models.ForeignKey(
         PointCloud,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="article_media",
@@ -294,7 +296,7 @@ class ArticleMedia(models.Model):
     )
     textured_model = models.ForeignKey(
         Object3js,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="article_media",

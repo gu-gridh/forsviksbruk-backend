@@ -89,7 +89,7 @@ ADDONS = [
     'rangefilter',
     'rest_framework_xml',
     'gridh_abstract',
-    'digicure_viewer',
+    'apps.forsviksbruk_viewer.apps.MediaLibraryConfig',  # digicure_viewer, named "Media library"
     'debug_toolbar',
 ]
 

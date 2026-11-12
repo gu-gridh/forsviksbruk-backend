@@ -57,12 +57,19 @@ class ArticleSerializer(DynamicDepthSerializer):
     area_name = serializers.CharField(source="area.name", read_only=True, default=None)
     spaces = ArticleSpaceSerializer(many=True, read_only=True)
     links = ArticleLinkSerializer(many=True, read_only=True)
-    advanced_media = ArticleMediaSerializer(read_only=True, default=None)
+    advanced_media = serializers.SerializerMethodField()
     location = serializers.SerializerMethodField()
 
     class Meta(DynamicDepthSerializer.Meta):
         model = Article
         fields = ["id", "area", "area_name", "title", "location", "spaces", "links", "advanced_media"]
+
+    def get_advanced_media(self, obj):
+        """The advanced media, or None if there is none or its resource was deleted."""
+        media = getattr(obj, "advanced_media", None)
+        if media is None or media.resource is None:
+            return None
+        return ArticleMediaSerializer(media, context=self.context).data
 
     def get_location(self, obj):
         """Place on the map as {"lat": ..., "lng": ...} (Leaflet order), or None."""

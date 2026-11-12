@@ -20,9 +20,9 @@ from .models import (
 )
 
 
-# Digicure media is managed from the Advanced media inline on articles. Its admins stay
-# registered, because the inline's add/edit popups and autocomplete use them,
-# but they are hidden from the admin index and sidebar.
+# Areas and Digicure media are created from the Article page (the "+" buttons in
+# the Area and Advanced media inlines). Their own list pages stay in the sidebar
+# so items can be found, edited and deleted, but without an "Add" button there.
 @admin.register(Object3js)
 class Object3jsAdmin(admin.ModelAdmin):
     list_display = ["title", "url_public", "technique", "scaled"]
@@ -30,12 +30,24 @@ class Object3jsAdmin(admin.ModelAdmin):
     filter_horizontal = ["place", "author"]
 
 
-def _hide_from_index(model_admin):
-    model_admin.get_model_perms = lambda request: {}
+def _list_without_add(model_admin):
+    """Hide "Add" in the sidebar and on the list page. Adding still works in the
+    Article page's popups, which need the add permission itself."""
+    get_model_perms = model_admin.get_model_perms
+    changelist_view = model_admin.changelist_view
+
+    def model_perms(request):
+        return {**get_model_perms(request), "add": False}
+
+    def list_view(request, extra_context=None):
+        return changelist_view(request, {**(extra_context or {}), "has_add_permission": False})
+
+    model_admin.get_model_perms = model_perms
+    model_admin.changelist_view = list_view
 
 
 for _model in (Author, TypeOfImage, Image, Object3js, Panorama, PointCloud):
-    _hide_from_index(admin.site._registry[_model])
+    _list_without_add(admin.site._registry[_model])
 
 # 3D Hop and RTI are not used in this project
 admin.site.unregister([ThreeDHop, RTI])
@@ -43,14 +55,12 @@ admin.site.unregister([ThreeDHop, RTI])
 
 @admin.register(Area)
 class AreaAdmin(TabbedTranslationAdmin):
-    """Areas are chosen, created ("+") and edited (pencil) from the Article page,
-    so they are hidden from the sidebar."""
     list_display = ["name", "published", "created_at"]
     list_filter = ["published"]
     search_fields = ["name", "description"]
 
-    def get_model_perms(self, request):
-        return {}
+
+_list_without_add(admin.site._registry[Area])
 
 
 @admin.register(Page)
