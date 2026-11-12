@@ -5,6 +5,7 @@ Forsviksbruk Viewer Tests
 import pytest
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
 from digicure_viewer.models import Image, Panorama, PointCloud
@@ -95,3 +96,13 @@ class TestArticleAPI:
         media = self.client.get(f"/sv/api/articles/{self.article.pk}/").data["advanced_media"]
         assert media["url"] == "https://example.org/panorama/yard/"
         assert media["iiif_url"] is None
+        assert media["preview_url"] is None
+
+    def test_advanced_media_preview_url(self, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+        upload = SimpleUploadedFile("yard.png", b"\x89PNG", content_type="image/png")
+        panorama = Panorama.objects.create(title="Yard", preview_image=upload)
+        assert panorama.preview_image.name.startswith("digicure_viewer/original/")
+        ArticleMedia.objects.create(article=self.article, media_type="panorama", panorama=panorama)
+        media = self.client.get(f"/sv/api/articles/{self.article.pk}/").data["advanced_media"]
+        assert media["preview_url"].endswith(panorama.preview_image.url)

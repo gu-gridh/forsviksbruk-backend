@@ -4,7 +4,8 @@ from modeltranslation.admin import TabbedTranslationAdmin, TranslationTabularInl
 
 # Import digicure_viewer's admin now (this app loads first) so its registrations can be adjusted below
 import digicure_viewer.admin  # noqa: F401
-from digicure_viewer.models import RTI, Author, Image, Object3js, Panorama, PointCloud, ThreeDHop, TypeOfImage
+from digicure_viewer.admin import PreviewImageAdminMixin
+from digicure_viewer.models import RTI, Object3js, ThreeDHop
 
 from .models import (
     MAX_ARTICLE_LINKS,
@@ -20,34 +21,12 @@ from .models import (
 )
 
 
-# Areas and Digicure media are created from the Article page (the "+" buttons in
-# the Area and Advanced media inlines). Their own list pages stay in the sidebar
-# so items can be found, edited and deleted, but without an "Add" button there.
 @admin.register(Object3js)
-class Object3jsAdmin(admin.ModelAdmin):
+class Object3jsAdmin(PreviewImageAdminMixin, admin.ModelAdmin):
     list_display = ["title", "url_public", "technique", "scaled"]
     search_fields = ["title", "place__name"]
     filter_horizontal = ["place", "author"]
 
-
-def _list_without_add(model_admin):
-    """Hide "Add" in the sidebar and on the list page. Adding still works in the
-    Article page's popups, which need the add permission itself."""
-    get_model_perms = model_admin.get_model_perms
-    changelist_view = model_admin.changelist_view
-
-    def model_perms(request):
-        return {**get_model_perms(request), "add": False}
-
-    def list_view(request, extra_context=None):
-        return changelist_view(request, {**(extra_context or {}), "has_add_permission": False})
-
-    model_admin.get_model_perms = model_perms
-    model_admin.changelist_view = list_view
-
-
-for _model in (Author, TypeOfImage, Image, Object3js, Panorama, PointCloud):
-    _list_without_add(admin.site._registry[_model])
 
 # 3D Hop and RTI are not used in this project
 admin.site.unregister([ThreeDHop, RTI])
@@ -58,9 +37,6 @@ class AreaAdmin(TabbedTranslationAdmin):
     list_display = ["name", "published", "created_at"]
     list_filter = ["published"]
     search_fields = ["name", "description"]
-
-
-_list_without_add(admin.site._registry[Area])
 
 
 @admin.register(Page)
