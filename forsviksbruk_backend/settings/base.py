@@ -244,9 +244,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Admin map widget (django-leaflet), using the Forsvik plan tiles
 # Tiles exist for zoom 14-20 and are only served over https
-FORSVIK_TILES_URL = 'https://dh.gu.se/tiles/forsvik/{z}/{x}/{y}.png'
+FORSVIK_TILES_URL = 'https://dh.gu.se/tiles/forsvik_old/{z}/{x}/{y}.png'
 LEAFLET_CONFIG = {
-    'DEFAULT_CENTER': (58.5844, 14.4371),
+    'DEFAULT_CENTER': (58.5795, 14.4361),
     'DEFAULT_ZOOM': 16,
     'MIN_ZOOM': 14,
     'MAX_ZOOM': 22,
