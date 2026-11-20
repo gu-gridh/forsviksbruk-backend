@@ -32,7 +32,13 @@ MAX_ARTICLE_LINKS = 5
 
 class _EmbedCodeChecker(HTMLParser):
     """Collects what an embed code contains that is not allowed."""
-    ALLOWED_TAGS = {"iframe", "audio", "video", "source", "track"}
+    # Players, plus the simple text and links that services such as
+    # SoundCloud add below the player (artist and track credits)
+    ALLOWED_TAGS = {
+        "iframe", "audio", "video", "source", "track",
+        "div", "span", "p", "a", "br",
+    }
+    URL_ATTRIBUTES = {"src", "href"}
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -42,23 +48,27 @@ class _EmbedCodeChecker(HTMLParser):
         if tag not in self.ALLOWED_TAGS:
             self.problems.add(f"<{tag}>")
         for name, value in attrs:
-            if name.startswith("on"):
+            compact = re.sub(r"\s", "", value or "").lower()
+            if name.startswith("on") or name == "srcdoc":
                 self.problems.add(f"{name}=")
-            elif value and re.sub(r"\s", "", value).lower().startswith(("javascript:", "data:text")):
-                self.problems.add(f"{name}={value[:30]}")
+            elif "javascript:" in compact or "vbscript:" in compact or "expression(" in compact:
+                self.problems.add(f"{name}={(value or '')[:30]}")
+            elif name in self.URL_ATTRIBUTES and compact and not compact.startswith(("https://", "http://", "//")):
+                self.problems.add(f"{name}={(value or '')[:30]}")
 
     handle_startendtag = handle_starttag
 
 
 def validate_embed_code(value):
     """
-    Allow a plain URL, or HTML embed code made only of iframe, audio, video,
-    source and track tags, without event handlers or javascript: URLs.
-    The frontend inserts this HTML into the page, so anything else is rejected.
+    Allow a plain URL, or HTML embed code: an iframe, audio or video player,
+    optionally with simple text and links around it (div, span, p, a, br),
+    as SoundCloud adds. Event handlers, srcdoc and non-http(s) URLs are
+    rejected, since the frontend inserts this HTML into the page.
     """
     value = (value or "").strip()
     if not value or "<" not in value:
-        if value.lower().startswith("javascript:"):
+        if value and not re.match(r"^https?://", value, re.IGNORECASE):
             raise ValidationError(_("Enter an embed code or a http(s) URL."))
         return
     checker = _EmbedCodeChecker()
@@ -66,7 +76,8 @@ def validate_embed_code(value):
     checker.close()
     if checker.problems:
         raise ValidationError(
-            _("The embed code may only contain iframe, audio or video tags. Not allowed: %(items)s"),
+            _("The embed code may only contain a player (iframe, audio or video) "
+              "with simple text and links. Not allowed: %(items)s"),
             params={"items": ", ".join(sorted(checker.problems))},
         )
 

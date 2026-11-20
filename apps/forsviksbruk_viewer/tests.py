@@ -18,6 +18,18 @@ from .models import (
 class TestArticleSpace:
 
     IFRAME = '<iframe src="https://www.youtube.com/embed/abc" allowfullscreen></iframe>'
+    # Embed code as copied from SoundCloud: the player and a credit line with links
+    SOUNDCLOUD = (
+        '<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay; encrypted-media" '
+        'src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks'
+        '%253A34019569&color=0066cc"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;'
+        'word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,'
+        'Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;">'
+        '<a href="https://soundcloud.com/the-bugle" title="The Bugle" target="_blank" style="color: #cccccc; '
+        'text-decoration: none;">The Bugle</a> · <a href="https://soundcloud.com/the-bugle/bugle-179-playas-gon-play" '
+        'title="Bugle 179 - Playas gon play" target="_blank" style="color: #cccccc; text-decoration: none;">'
+        'Bugle 179 - Playas gon play</a></div>'
+    )
 
     def test_image_sound_and_video_in_one_space(self):
         article = Article.objects.create(title="Hammaren")
@@ -32,6 +44,7 @@ class TestArticleSpace:
         "https://example.org/video",
         IFRAME,
         '<audio controls><source src="https://example.org/a.mp3" type="audio/mpeg"></audio>',
+        SOUNDCLOUD,
     ])
     def test_embed_code_allowed(self, value):
         validate_embed_code(value)
@@ -42,6 +55,13 @@ class TestArticleSpace:
         '<iframe src="javascript:alert(1)"></iframe>',
         '<img src="x" onerror="alert(1)">',
         "javascript:alert(1)",
+        '<a href="javascript:alert(1)">x</a>',
+        '<a href=" JaVa script:alert(1)">x</a>',
+        '<iframe srcdoc="<script>alert(1)</script>"></iframe>',
+        '<iframe src="data:text/html,<script>alert(1)</script>"></iframe>',
+        '<div style="background:url(javascript:alert(1))">x</div>',
+        '<style>body{display:none}</style>',
+        "not a url",
     ])
     def test_embed_code_rejected(self, value):
         with pytest.raises(ValidationError):
