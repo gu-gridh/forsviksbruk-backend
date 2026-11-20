@@ -224,3 +224,13 @@ __marimo__/
 Thumbs.db
 static_build/
 media/
+
+# Reference material (slides, screenshots), not part of the code
+data-model/
+
+# Migrations are not tracked: each environment runs `makemigrations` itself.
+# The packages' __init__.py files stay tracked so the folders exist.
+apps/*/migrations/*
+!apps/*/migrations/__init__.py
+forsviksbruk_backend/digicure_migrations/*
+!forsviksbruk_backend/digicure_migrations/__init__.py
