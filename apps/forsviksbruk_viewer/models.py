@@ -15,6 +15,9 @@ Media resources (PointCloud, Panorama, Object3js, Image) come from digicure_view
 Translatable fields are registered in translation.py.
 """
 
+import re
+from html.parser import HTMLParser
+
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
@@ -25,6 +28,47 @@ from digicure_viewer.models import Image, Object3js, Panorama, PointCloud, get_l
 
 MAX_ARTICLE_SPACES = 4
 MAX_ARTICLE_LINKS = 5
+
+
+class _EmbedCodeChecker(HTMLParser):
+    """Collects what an embed code contains that is not allowed."""
+    ALLOWED_TAGS = {"iframe", "audio", "video", "source", "track"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.problems = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in self.ALLOWED_TAGS:
+            self.problems.add(f"<{tag}>")
+        for name, value in attrs:
+            if name.startswith("on"):
+                self.problems.add(f"{name}=")
+            elif value and re.sub(r"\s", "", value).lower().startswith(("javascript:", "data:text")):
+                self.problems.add(f"{name}={value[:30]}")
+
+    handle_startendtag = handle_starttag
+
+
+def validate_embed_code(value):
+    """
+    Allow a plain URL, or HTML embed code made only of iframe, audio, video,
+    source and track tags, without event handlers or javascript: URLs.
+    The frontend inserts this HTML into the page, so anything else is rejected.
+    """
+    value = (value or "").strip()
+    if not value or "<" not in value:
+        if value.lower().startswith("javascript:"):
+            raise ValidationError(_("Enter an embed code or a http(s) URL."))
+        return
+    checker = _EmbedCodeChecker()
+    checker.feed(value)
+    checker.close()
+    if checker.problems:
+        raise ValidationError(
+            _("The embed code may only contain iframe, audio or video tags. Not allowed: %(items)s"),
+            params={"items": ", ".join(sorted(checker.problems))},
+        )
 
 
 class Area(AbstractBaseModel):
@@ -147,8 +191,9 @@ class ArticleArea(models.Model):
 
 class ArticleSpace(models.Model):
     """
-    One content space of an article: free text and one media object
-    (image, sound or embedded video) with a caption.
+    One content space of an article: free text, an image, a sound (uploaded
+    file and/or embed code) and an embedded video, with a caption.
+    All media are optional and can be combined in the same space.
     """
 
     article = models.ForeignKey(
@@ -177,10 +222,18 @@ class ArticleSpace(models.Model):
         null=True,
         verbose_name=_("Sound"),
     )
-    video_url = models.URLField(
-        max_length=1024,
+    sound_embed = models.TextField(
         blank=True,
-        verbose_name=_("Video URL for embed"),
+        validators=[validate_embed_code],
+        verbose_name=_("Sound embed code"),
+        help_text=_("Paste the embed code (the iframe code from e.g. SoundCloud or Spotify) or a URL"),
+    )
+    # Named video_url for backwards compatibility; holds embed code or a URL
+    video_url = models.TextField(
+        blank=True,
+        validators=[validate_embed_code],
+        verbose_name=_("Video embed code"),
+        help_text=_("Paste the embed code (the iframe code from e.g. YouTube or Vimeo) or a URL"),
     )
     caption = models.CharField(
         max_length=1024,
@@ -198,11 +251,6 @@ class ArticleSpace(models.Model):
 
     def __str__(self):
         return f"{self.article} – {self.order}"
-
-    def clean(self):
-        media = [bool(self.image), bool(self.sound), bool(self.video_url)]
-        if sum(media) > 1:
-            raise ValidationError(_("A space can only hold one media object: image, sound or video."))
 
 
 class ArticleLink(models.Model):

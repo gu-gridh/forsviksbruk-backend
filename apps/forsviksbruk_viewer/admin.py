@@ -92,6 +92,9 @@ class ArticleAdmin(LeafletGeoAdminMixin, TabbedTranslationAdmin):
     search_fields = ["title", "area_link__area__name"]
     inlines = [ArticleAreaInline, ArticleMediaInline, ArticleSpaceInline, ArticleLinkInline]
 
+    class Media:
+        css = {"all": ["forsviksbruk_viewer/admin-map.css"]}
+
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         link = ArticleArea.objects.filter(article=form.instance).select_related("area").first()

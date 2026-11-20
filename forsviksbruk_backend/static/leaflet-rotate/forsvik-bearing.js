@@ -6,9 +6,14 @@
 // L.Map constructor (L.Map.mergeOptions is not enough), and django-leaflet
 // builds its own options, so inject the defaults into every new map here.
 (function () {
+    // Initial zoom of admin maps, also for existing points (see forsvik-zoom.js)
+    var FORSVIK_ZOOM = 16.5;
+
     var FORSVIK_ROTATION = {
         rotate: true,
-        bearing: 200,
+        bearing: 160,
+        // Allow half zoom levels (django-leaflet's DEFAULT_ZOOM must be an int)
+        zoomSnap: 0.5,
         touchRotate: false,
         rotateControl: {
             closeOnZeroBearing: false,
@@ -18,7 +23,7 @@
     var initialize = L.Map.prototype.initialize;
     L.Map.include({
         initialize: function (id, options) {
-            return initialize.call(this, id, L.extend({}, FORSVIK_ROTATION, options));
+            return initialize.call(this, id, L.extend({}, FORSVIK_ROTATION, options, {zoom: FORSVIK_ZOOM}));
         },
     });
 

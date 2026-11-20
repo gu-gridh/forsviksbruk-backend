@@ -26,7 +26,7 @@ class PageSerializer(GenericSerializer):
 class ArticleSpaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArticleSpace
-        fields = ["order", "text", "image", "sound", "video_url", "caption"]
+        fields = ["order", "text", "image", "sound", "sound_embed", "video_url", "caption"]
 
 
 class ArticleLinkSerializer(serializers.ModelSerializer):

@@ -1,0 +1,6 @@
+/* Keep Leaflet's panes and controls (z-index 400-1000) inside the map, so the
+   sticky Save bar of the admin form stays on top of the map when scrolling. */
+.leaflet-container {
+    isolation: isolate;
+    z-index: 0;
+}

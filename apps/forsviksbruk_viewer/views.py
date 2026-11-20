@@ -5,6 +5,7 @@ Read-only API endpoints for the multimodal map and the Digicure viewer.
 """
 
 import django_filters
+from django.db.models import Q
 from digicure_viewer import views as digicure_views
 from digicure_viewer.models import PointCloud
 from digicure_viewer.serializers import PointCloudSerializer
@@ -35,12 +36,34 @@ class PageViewSet(DynamicDepthViewSet):
 
 
 class ArticleFilter(django_filters.FilterSet):
-    """Filter articles with ?area=<id>"""
+    """
+    Filter articles with ?area=<id> and/or ?media_type=<type>, where type is
+    image, panorama, pointcloud or textured_model (several: ?media_type=image,panorama).
+    """
     area = django_filters.NumberFilter(field_name="area_link__area")
+    media_type = django_filters.MultipleChoiceFilter(
+        field_name="advanced_media__media_type",
+        choices=ArticleMedia.Type.choices,
+        method="filter_media_type",
+    )
 
     class Meta:
         model = Article
-        fields = ["area"]
+        fields = ["area", "media_type"]
+
+    def filter_media_type(self, queryset, name, values):
+        # Only articles whose media of that type still exists (not deleted)
+        query = Q()
+        for value in values:
+            query |= Q(advanced_media__media_type=value, **{f"advanced_media__{value}__isnull": False})
+        return queryset.filter(query)
+
+    def __init__(self, data=None, *args, **kwargs):
+        # Accept comma-separated values: ?media_type=image,panorama
+        if data is not None and "media_type" in data:
+            data = data.copy()
+            data.setlist("media_type", [v for item in data.getlist("media_type") for v in item.split(",") if v])
+        super().__init__(data, *args, **kwargs)
 
 
 class ArticleViewSet(DynamicDepthViewSet):
@@ -53,10 +76,10 @@ class ArticleViewSet(DynamicDepthViewSet):
 
 
 class ArticleInfoFilter(ArticleFilter):
-    """Filter with ?id=<id> (or ?area=<id>)"""
+    """Filter with ?id=<id> (or ?area=<id>, ?media_type=<type>)"""
 
     class Meta(ArticleFilter.Meta):
-        fields = ["id", "area"]
+        fields = ["id", "area", "media_type"]
 
 
 class ArticleInfoViewSet(DynamicDepthViewSet):

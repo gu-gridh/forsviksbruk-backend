@@ -247,18 +247,19 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 FORSVIK_TILES_URL = 'https://dh.gu.se/tiles/forsvik_old/{z}/{x}/{y}.png'
 LEAFLET_CONFIG = {
     'DEFAULT_CENTER': (58.5795, 14.4361),
-    'DEFAULT_ZOOM': 16,
+    'DEFAULT_ZOOM': 16,  # must be an int; forsvik-bearing.js opens admin maps at 16.5
     'MIN_ZOOM': 14,
     'MAX_ZOOM': 22,
     'TILES': [
         ('Forsvik plan', FORSVIK_TILES_URL, {'attribution': '&copy; GRIDH', 'maxNativeZoom': 20, 'maxZoom': 22}),
         ('OpenStreetMap', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {'attribution': '&copy; OpenStreetMap contributors', 'maxNativeZoom': 19, 'maxZoom': 22}),
     ],
-    # The plan is drawn upside down, so rotate admin maps by 190 degrees (bearing set in forsvik-bearing.js).
+    # The plan is drawn upside down, so rotate admin maps by 160 degrees (bearing set in forsvik-bearing.js).
     # Admin map widgets only load the 'forms' plugin; django-leaflet prepends its own form scripts to it.
+    # forsvik-zoom.js opens existing points at DEFAULT_ZOOM.
     'PLUGINS': {
         'forms': {
-            'js': ['leaflet-rotate/leaflet-rotate.js', 'leaflet-rotate/forsvik-bearing.js'],
+            'js': ['leaflet-rotate/leaflet-rotate.js', 'leaflet-rotate/forsvik-bearing.js', 'leaflet-rotate/forsvik-zoom.js'],
         },
     },
 }

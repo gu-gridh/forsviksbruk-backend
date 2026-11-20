@@ -9,17 +9,43 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
 from digicure_viewer.models import Author, Image, Panorama, PointCloud, Technique3D
-from .models import Area, Article, ArticleArea, ArticleLink, ArticleMedia, ArticleSpace, PointcloudAnnotation
+from .models import (
+    Area, Article, ArticleArea, ArticleLink, ArticleMedia, ArticleSpace, PointcloudAnnotation, validate_embed_code,
+)
 
 
 @pytest.mark.django_db
 class TestArticleSpace:
 
-    def test_only_one_media_object(self):
+    IFRAME = '<iframe src="https://www.youtube.com/embed/abc" allowfullscreen></iframe>'
+
+    def test_image_sound_and_video_in_one_space(self):
         article = Article.objects.create(title="Hammaren")
-        space = ArticleSpace(article=article, order=1, video_url="https://example.org/video", image="a.jpg")
+        space = ArticleSpace(
+            article=article, order=1, image="a.jpg", sound="b.mp3",
+            sound_embed='<iframe src="https://w.soundcloud.com/player/?url=x"></iframe>',
+            video_url=self.IFRAME,
+        )
+        space.full_clean()
+
+    @pytest.mark.parametrize("value", [
+        "https://example.org/video",
+        IFRAME,
+        '<audio controls><source src="https://example.org/a.mp3" type="audio/mpeg"></audio>',
+    ])
+    def test_embed_code_allowed(self, value):
+        validate_embed_code(value)
+
+    @pytest.mark.parametrize("value", [
+        "<script>alert(1)</script>",
+        '<iframe src="https://example.org" onload="alert(1)"></iframe>',
+        '<iframe src="javascript:alert(1)"></iframe>',
+        '<img src="x" onerror="alert(1)">',
+        "javascript:alert(1)",
+    ])
+    def test_embed_code_rejected(self, value):
         with pytest.raises(ValidationError):
-            space.full_clean()
+            validate_embed_code(value)
 
 
 @pytest.mark.django_db
@@ -179,3 +205,37 @@ class TestArticleInfoAPI:
         assert media["north_offset"] == 1.5
         assert media["uuid"] == str(panorama.uuid)
         assert "technique" not in media
+
+
+@pytest.mark.django_db
+class TestArticleMediaTypeFilter:
+    """?media_type= on /api/articles/ and /api/article_info/"""
+
+    def setup_method(self):
+        self.client = APIClient()
+        self.panorama_article = Article.objects.create(title="Gården")
+        ArticleMedia.objects.create(article=self.panorama_article, media_type="panorama",
+                                    panorama=Panorama.objects.create(title="Yard"))
+        self.cloud_article = Article.objects.create(title="Smedjan")
+        ArticleMedia.objects.create(article=self.cloud_article, media_type="pointcloud",
+                                    pointcloud=PointCloud.objects.create(title="Scan"))
+        self.plain_article = Article.objects.create(title="Dammen")
+
+    def ids(self, endpoint, media_type):
+        response = self.client.get(f"/sv/api/{endpoint}/", {"media_type": media_type})
+        assert response.status_code == status.HTTP_200_OK
+        return {r["id"] for r in response.data["results"]}
+
+    @pytest.mark.parametrize("endpoint", ["articles", "article_info"])
+    def test_filter_one_type(self, endpoint):
+        assert self.ids(endpoint, "panorama") == {self.panorama_article.pk}
+
+    def test_filter_several_types(self):
+        assert self.ids("articles", "panorama,pointcloud") == {self.panorama_article.pk, self.cloud_article.pk}
+
+    def test_deleted_resource_is_not_matched(self):
+        self.panorama_article.advanced_media.panorama.delete()
+        assert self.ids("articles", "panorama") == set()
+
+    def test_unknown_type_is_rejected(self):
+        assert self.client.get("/sv/api/articles/", {"media_type": "video"}).status_code == status.HTTP_400_BAD_REQUEST
